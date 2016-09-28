@@ -1,11 +1,13 @@
-package org.apache.spark.sql.catalyst.expressions.codegen
+package org.apache.spark.sql.catalyst.expressions.codegen.custom
 
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.NoOp
+import org.apache.spark.sql.catalyst.expressions.codegen._
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, GenericArrayData}
 import org.apache.spark.sql.types._
 
 import scala.annotation.tailrec
+
 
 /**
   *
@@ -18,8 +20,7 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
   protected def bind(in: Seq[Expression], inputSchema: Seq[Attribute]): Seq[Expression] =
     in.map(BindReferences.bindReference(_, inputSchema))
 
-  private def createCodeForStruct(
-                                   ctx: CodegenContext,
+  private def createCodeForStruct( ctx: CodegenContext,
                                    input: String,
                                    schema: StructType): ExprCode = {
     val tmp = ctx.freshName("tmp")
@@ -116,6 +117,31 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
 
   protected def create(expressions: Seq[Expression]): Projection = {
     val ctx = newCodeGenContext()
+    val (code, references) = generateCodeAndRef(expressions, ctx)
+    create(code, references)
+  }
+
+
+  def create(code: CodeAndComment, references: Array[Any]): Projection = {
+
+    val formattedCode: CodeAndComment = CodeFormatter.stripOverlappingComments(code)
+    logDebug(s"code:\n${CodeFormatter.format(formattedCode)}")
+
+    val generatedClass: GeneratedClass = CodeGenerator.compile(code)
+    generatedClass.generate(references).asInstanceOf[Projection]
+  }
+
+  def generateCodeAndRef(expressions: Seq[Expression], ctx: CodegenContext = newCodeGenContext()): (CodeAndComment, Array[Any]) = {
+
+    val resultRow = new SpecificMutableRow(expressions.map(_.dataType))
+    val code = generateCode(expressions, ctx)
+    val references: Array[Any] = ctx.references.toArray :+ resultRow
+
+    (code, references)
+  }
+
+  private def generateCode(expressions: Seq[Expression], ctx: CodegenContext = newCodeGenContext()): CodeAndComment = {
+
     val expressionCodes = expressions.zipWithIndex.map {
       case (NoOp, _) => ""
       case (e, i) =>
@@ -137,7 +163,7 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
         return new SpecificSafeProjection(references);
       }
 
-      class SpecificSafeProjection extends ${classOf[BaseProjection].getName} implements java.io.Serializable {
+      static class SpecificSafeProjection extends ${classOf[BaseProjection].getName} implements java.io.Serializable {
 
         private Object[] references;
         private MutableRow mutableRow;
@@ -158,12 +184,7 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
       }
     """
 
-    val code = CodeFormatter.stripOverlappingComments(
-      new CodeAndComment(codeBody, ctx.getPlaceHolderToComments()))
-    logDebug(s"code for ${expressions.mkString(",")}:\n${CodeFormatter.format(code)}")
-
-    val c = CustomCodeGenerator.compile(code)
-    val resultRow = new SpecificMutableRow(expressions.map(_.dataType))
-    c.generate(ctx.references.toArray :+ resultRow).asInstanceOf[Projection]
+    new CodeAndComment(codeBody, ctx.getPlaceHolderToComments())
   }
+
 }

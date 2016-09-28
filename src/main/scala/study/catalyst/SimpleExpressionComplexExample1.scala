@@ -3,7 +3,8 @@ package study.catalyst
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.catalyst.analysis.SimpleAnalyzer
 import org.apache.spark.sql.catalyst.expressions._
-import org.apache.spark.sql.catalyst.expressions.codegen.{CodegenContext, CustomGenerateSafeProjection}
+import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
+import org.apache.spark.sql.catalyst.expressions.codegen.custom.CustomGenerateSafeProjection
 import org.apache.spark.sql.catalyst.optimizer.{ConstantFolding, PushPredicateThroughJoin}
 import org.apache.spark.sql.catalyst.plans.logical.{Filter, LocalRelation, LogicalPlan, Project}
 import org.apache.spark.sql.types.DoubleType
@@ -143,7 +144,7 @@ object SimpleExpressionComplexExample1 extends App {
   // Generate byte code from the deserialised plan
   val genFun: Projection = CustomGenerateSafeProjection.generate(loadedPlan.expressions)
 
-  println(genFun.apply(InternalRow(0.0)))
+  println(genFun.apply(v1 = InternalRow(0.0)))
   println(genFun(InternalRow(6.0)))
   println(genFun(InternalRow(7.0)))
   println(Try(genFun(InternalRow(1))))

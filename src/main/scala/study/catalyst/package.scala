@@ -3,8 +3,8 @@ package study
 import java.io._
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, ScalaUDF, Expression}
 import org.apache.spark.sql.catalyst.expressions.codegen.CodegenContext
+import org.apache.spark.sql.catalyst.expressions.{Alias, AttributeReference, Expression, ScalaUDF}
 import org.apache.spark.sql.catalyst.plans.logical.Project
 import org.apache.spark.sql.catalyst.trees.TreeNode
 import org.apache.spark.sql.execution.ProjectExec
@@ -16,8 +16,16 @@ import scala.util.Try
   */
 package object catalyst {
 
+
+  val spark = SparkSession
+    .builder()
+    .appName(this.getClass.getSimpleName)
+    .master("local")
+    .getOrCreate()
+
   /**
     * Utility function for code generation of a single expression
+    *
     * @param expression
     * @param codegenContext
     * @return
@@ -47,6 +55,7 @@ package object catalyst {
 
   /**
     * Read a serialised object from a file
+    *
     * @param file
     * @tparam T
     * @return
@@ -63,10 +72,12 @@ package object catalyst {
         in.close()
         fileIn.close()
       }
+//      SerializationUtils.deserialize[T](new FileInputStream(file))
     }
 
   /**
     * Read a serialised object from a file
+    *
     * @param file
     * @tparam T
     * @return
@@ -76,6 +87,7 @@ package object catalyst {
 
   /**
     * Write an object to a file
+    *
     * @param file
     * @tparam T
     * @return
@@ -92,10 +104,12 @@ package object catalyst {
         out.close()
         fileOut.close()
       }
+//      SerializationUtils.serialize(obj, new FileOutputStream(file))
     }
 
   /**
     * Write an object to a file
+ *
     * @param file
     * @tparam T
     * @return
@@ -105,6 +119,7 @@ package object catalyst {
 
   /**
     * Extract a sequence of ScalaUDFs from a given TreeNode
+ *
     * @param node
     * @param result
     * @return
@@ -122,6 +137,7 @@ package object catalyst {
 
   /**
     * Print some quasi random stuff about a TreeNode
+ *
     * @param node
     * @param indentation
     */
@@ -141,6 +157,23 @@ package object catalyst {
       node.children.filter(_.isInstanceOf[TreeNode[_]]).foreach(c => printLP(c.asInstanceOf[TreeNode[_]], depth + 1))
     }
     printLP(node, 0)
+  }
+  def describeUDF(udf: ScalaUDF, id: Option[Any] = None) = {
+    println("----------------------------------------------")
+    println(s"--- ScalaUDF Description ${if(id.isDefined) " : " + id.toString}")
+    println(s"nodeName = ${udf.nodeName}")
+    println(s"data type = ${udf.dataType}")
+    println(s"deterministic = ${udf.deterministic}")
+    println(s"userDefinedFunc = ${udf.userDefinedFunc}")
+    println(s"children:")
+    udf.children.foreach(c => {println(s"  - ${c.getClass}"); println(s"    - $c")})
+    println(s"inputTypes:")
+    udf.inputTypes.foreach(c => println(s"  - $c"))
+    println(s"references:")
+    udf.references.foreach(c => println(s"  - $c"))
+    println(s"treeString:")
+    println(udf.treeString(true))
+    println("----------------------------------------------")
   }
 
 }

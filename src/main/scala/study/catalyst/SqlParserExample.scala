@@ -2,7 +2,8 @@ package study.catalyst
 
 import org.apache.spark.sql.catalyst.analysis.SimpleAnalyzer
 import org.apache.spark.sql.catalyst.parser.CatalystSqlParser
-import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
+
+import scala.util.Try
 
 /**
   *
@@ -14,6 +15,6 @@ object SqlParserExample extends App {
   println(parsedPlan)
 
   // This one fails since there is no database, table and table structure available in the catalog
-  val analyzedPlan: LogicalPlan = SimpleAnalyzer.execute(parsedPlan)
+  println(Try(SimpleAnalyzer.execute(parsedPlan)))
 
 }
