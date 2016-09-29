@@ -5,6 +5,7 @@ import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.codegen.custom.CustomGenerateSafeProjection
 import org.apache.spark.unsafe.types.UTF8String
 import study.catalyst._
+import study.catalyst.data._
 
 /**
   *

@@ -1,4 +1,4 @@
-package study.catalyst.kmeans
+package study.catalyst.sqls
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.InternalRow
@@ -7,19 +7,48 @@ import org.apache.spark.sql.catalyst.expressions.codegen.custom.CustomGenerateSa
 import org.apache.spark.unsafe.types.UTF8String
 import study.catalyst._
 import study.catalyst.data._
-import study.catalyst.kmeans.KMeansPipelineBuilder._
 
 /**
   * This class shows a primitive way of serializing data required for code generation and some metadata
   */
-object KMeansGenExample {
+object SimpleSqlGenExample {
 
-  val CODEGEN_PARAMETERS_FILE =  "/tmp/CodeGenParameters.ser"
+  val CODEGEN_PARAMETERS_FILE =  "/tmp/CodeGenParametersSimp.ser"
 
   def main(args: Array[String]) = {
 
     val inputDS: DataFrame = spark.createDataFrame(sampleClicks)
-    val transformedDS = pipeline.transform(inputDS)
+
+    inputDS.createOrReplaceTempView("clicks")
+
+    val transformedDS = spark.sql("""
+        SELECT *,
+               HOUR(`timestamp`) AS hour,
+               MONTH(`timestamp`) AS month,
+               CAST(DATE_FORMAT(`timestamp`, 'u') AS int) AS dayofweek,
+               DAYOFMONTH(`timestamp`) AS dayofmonth,
+               CASE WHEN sourceCountryAndCity IS NULL
+                  THEN "Unknown"
+                  ELSE trim(sourceCountryAndCity) END AS sourceCountry,
+               CASE WHEN sourceCountryAndCity IS NULL
+                  THEN "Unknown"
+                  ELSE trim(sourceCountryAndCity) END AS sourceCity,
+               CASE WHEN lower(trim(sourceURL)) = 'null' OR sourceURL is null OR trim(sourceURL) = ''
+                  THEN "Unknown"
+                  ELSE sourceURL
+               END AS sourceURL_nn,
+               CASE WHEN lower(trim(destinationURL)) = 'null' OR destinationURL is null OR trim(destinationURL) = ''
+                  THEN "Unknown"
+                  ELSE destinationURL
+               END AS destinationURL_nn,
+               CASE WHEN lower(trim(timeSpentSeconds)) = 'null' OR timeSpentSeconds is null OR trim(timeSpentSeconds) = '' OR lower(trim(timeSpentSeconds)) = 'unknown'
+                  THEN -1
+                  ELSE CAST(timeSpentSeconds AS int)
+               END AS timeSpentSeconds_num
+        FROM  clicks
+        WHERE `timestamp` IS NOT NULL
+      """
+    )
 
     transformedDS.show
 

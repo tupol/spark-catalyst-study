@@ -3,6 +3,7 @@ package org.apache.spark.sql.catalyst.expressions.codegen.custom
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.NoOp
 import org.apache.spark.sql.catalyst.expressions.codegen._
+import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, GenericArrayData}
 import org.apache.spark.sql.types._
 
@@ -131,7 +132,18 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
     generatedClass.generate(references).asInstanceOf[Projection]
   }
 
-  def generateCodeAndRef(expressions: Seq[Expression], ctx: CodegenContext = newCodeGenContext()): (CodeAndComment, Array[Any]) = {
+
+  def generateCodeAndRef(logicalPlan: LogicalPlan,
+                         ctx: CodegenContext = newCodeGenContext()): (CodeAndComment, Array[Any]) = {
+    generateCodeAndRef(bind(logicalPlan.expressions, logicalPlan.inputSet.toSeq), ctx)
+  }
+
+  def generateCodeAndRef(expressions: Seq[Expression], inputSchema: Seq[Attribute],
+                         ctx: CodegenContext): (CodeAndComment, Array[Any]) = {
+    generateCodeAndRef(bind(expressions, inputSchema), ctx)
+  }
+
+  def generateCodeAndRef(expressions: Seq[Expression], ctx: CodegenContext): (CodeAndComment, Array[Any]) = {
 
     val resultRow = new SpecificMutableRow(expressions.map(_.dataType))
     val code = generateCode(expressions, ctx)

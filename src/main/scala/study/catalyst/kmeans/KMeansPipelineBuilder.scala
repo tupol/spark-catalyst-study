@@ -6,6 +6,7 @@ import org.apache.spark.ml.{Pipeline, PipelineModel}
 import org.apache.spark.sql._
 import org.apache.spark.sql.types.{IntegerType, StringType}
 import study.catalyst._
+import study.catalyst.data._
 import study.catalyst.customCode.{SimpleFeatureTransformer, UrlCleaner}
 
 import scala.util.Try

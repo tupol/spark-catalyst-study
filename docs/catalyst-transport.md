@@ -4,8 +4,7 @@
 
 ## Rationale
 
-One of the challenges that developers face today in the world of big data machine learning applications is passing the algorithm description around so that it can be ran on independent platforms.
-
+One of the challenges that developers face today in the world of big data machine learning applications is passing the computation logic or computation description around so that it can be used on independent platforms.
 We will be exploring two main approaches:
 
 1. [Catalyst Generated Java Code](#catalyst-generated-java-code)
@@ -16,6 +15,7 @@ We will be exploring two main approaches:
 ## Introduction
 
 The main approach used so far was using the [Predictive Model Markup Language (PMML)](http://dmg.org/pmml/v4-3/GeneralStructure.html) standard from the [Data Mining Group (DMG)](http://dmg.org/) to communicate machine learning models.
+PMML statically describes machine learning model and not the computation logic. 
 The PMML standard showed quickly it's limitations and [Portable Format for Analytics (PFA)](http://dmg.org/pfa/) emerged as better standard standard to express computation rather than the model itself.
 
 There are three main problems with using the PMML/PFA standards:
@@ -30,7 +30,7 @@ There are three main problems with using the PMML/PFA standards:
 In Apache Spark many machine learning models already have a PMML implementation, but not all of them. 
 This of course might change over time, but there are no guarantees.
 
-On the other hand, the Catalyst logical plan maps quite nicely to PFA, with the exception of library functions (`ScalaUDF`s), which can not be passed through PFA.
+On the other hand, the Catalyst logical plans conceptually map quite nicely to PFA, with the exception of library functions (`ScalaUDF`s), which can not be passed through PFA.
 
 However, though there is some support for PMML export in Spark ML, there is no PFA support yet.
 
@@ -75,7 +75,7 @@ Having the generated class and the generated class instance, one only needs to p
 
 > For the moment I didn't look deep enough into Janino on how to compile on the fly and store the resulted **class** (not to be confused with the class instance) into a byte array form.
 
-> The tricky part here is keeping a balance with the library functions used, as all the dependencies will have to be passed along. In the `KMeansGenExample` class, the serialization includes the `UnaryTransformer` from the Spark MLlib library. All of the sudden the amount of dependencies that need to be passed on increases.
+> The tricky part here is keeping a balance with the library functions used, as all the dependencies will have to be passed along. In the `KMeansGenExample` class, the serialization includes the `UnaryTransformer` from the `spark-mllib` library. All of the sudden the amount of dependencies that need to be passed on increases.
 
 ### Pros and Cons
 
@@ -91,6 +91,9 @@ Having the generated class and the generated class instance, one only needs to p
 - Limited by default to the JVM world
 - Embedding 3rd party library functions can introduce security issues 
 - The dependencies can easy to grow both in number and disk size
+- Currently the Catalyst library depends on `spark-core`, making it hard to use by external systems
+- Limited to simple transformations (no aggregation nor sub-query code generated from the logical plan directly)
+- The generated code has dependencies to the Scala language
 
 
 ### Challenges
@@ -102,6 +105,9 @@ Having the generated class and the generated class instance, one only needs to p
 - The generated code itself is not serializable
   - This can be solved by creating a custom code generator
   - Still looking into passing the generated class along 
+- Assemble the code into jars or an uber-jar to be easy to used by external systems
+- Figure out sub query code generation
+- Figure out aggregation query code generation
 
 
 ### TODOs
@@ -115,7 +121,8 @@ Having the generated class and the generated class instance, one only needs to p
 
 PFA is self described as "a mini-language for mathematical calculations that is usually generated programmatically, rather than by hand".
 
-PFA has a "*LISPy*" feel, which has the advantage that makes it really easy to represent expressions as trees, using the prefix notation. This is a perfect match for the Catalyst `TreeNode` based expressions hierarchy.
+PFA has a "*LISPy*" like syntax, which has the advantage that makes it really easy to represent expressions as trees, using the prefix notation. This is a perfect match for the Catalyst `TreeNode` based expressions hierarchy.
+
 
 
 ### Pros and Cons
@@ -125,6 +132,7 @@ PFA has a "*LISPy*" feel, which has the advantage that makes it really easy to r
 - Very suitable for code generation, in both directions, from a programming language to PFa and from PFA to a programming language.
 - High security due to it's limitations to a fairly simple mathematical language, which allows no external library calls, so the PFA code can not introduce security issues.
 - Enforces high discipline in writing "analytics code".
+- Possible just a light dependency to a PFA parser library, which is already available (see  [Hadrian: implementations of the PFA specification](https://github.com/opendatagroup/hadrian))
 
 **Cons**
 

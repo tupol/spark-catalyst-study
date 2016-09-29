@@ -1,4 +1,4 @@
-package study.catalyst.kmeans
+package study.catalyst.sqls
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.InternalRow
@@ -7,24 +7,37 @@ import org.apache.spark.sql.catalyst.expressions.codegen.custom.CustomGenerateSa
 import org.apache.spark.unsafe.types.UTF8String
 import study.catalyst._
 import study.catalyst.data._
-import study.catalyst.kmeans.KMeansPipelineBuilder._
 
 /**
   * This class shows a primitive way of serializing data required for code generation and some metadata
   */
-object KMeansGenExample {
+object AggregateSqlGenExample {
 
-  val CODEGEN_PARAMETERS_FILE =  "/tmp/CodeGenParameters.ser"
+  val CODEGEN_PARAMETERS_FILE =  "/tmp/CodeGenParametersAggr.ser"
 
   def main(args: Array[String]) = {
 
     val inputDS: DataFrame = spark.createDataFrame(sampleClicks)
-    val transformedDS = pipeline.transform(inputDS)
+
+    inputDS.createOrReplaceTempView("clicks")
+
+    val transformedDS = spark.sql("""
+        SELECT
+               sourceCountryAndCity, count(sourceCountryAndCity)
+        FROM  clicks
+        WHERE `timestamp` IS NOT NULL
+        GROUP BY sourceCountryAndCity
+      """
+    )
 
     transformedDS.show
 
     // Get the work plan that we are going to work with
     val workPlan = transformedDS.queryExecution.optimizedPlan
+
+    println("----------------------------------------------")
+    println(workPlan.treeString(true))
+    println("----------------------------------------------")
 
     // Generate the building blocks of our custom projection
     val (code, references) = CustomGenerateSafeProjection.generateCodeAndRef(workPlan)
