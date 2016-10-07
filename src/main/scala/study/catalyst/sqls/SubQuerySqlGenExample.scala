@@ -76,6 +76,8 @@ object SubQuerySqlGenExample {
     inRows.foreach(println)
     println("----------------------------------------------")
     // Let's see how the results look like
+    // !!!!!!!!!!!!!
+    // Results are no good!
     inRows.foreach(r => println(generatedProjection(r)))
     println("----------------------------------------------")
 

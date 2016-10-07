@@ -45,6 +45,7 @@ object KMeansGenExample {
     // Generate a projection out of the loaded generation parameters
     val generatedProjection: Projection = CustomGenerateSafeProjection.create(loadedParams.code, loadedParams.references)
 
+    writeLines(loadedParams.code.body.split("\n"), "/tmp/gencode.java")
     println("----------------------------------------------")
     // Print the data used to train the model, just for kicks
     sampleClicks.foreach(println)

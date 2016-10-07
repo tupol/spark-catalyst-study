@@ -150,9 +150,4 @@ object SimpleExpressionComplexExample1 extends App {
   println(Try(genFun(InternalRow(1))))
   println(Try(genFun(InternalRow("1.0"))))
 
-  writeObject(genFun, "/tmp/myfun.bin")
-  val loadedFun: Projection = readObject[Projection]("/tmp/myfun.bin").get
-  println(loadedFun.apply(InternalRow(0.0)))
-
-
 }

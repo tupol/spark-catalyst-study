@@ -34,24 +34,6 @@ package object catalyst {
     codegenContext.generateExpressions(Seq(expression)).head
   }
 
-  case class Person(id: Int, name: String)
-
-  def createPeople(spark: SparkSession) = spark.createDataFrame(List(
-    Person(1, "John"),
-    Person(2, "Mary"),
-    Person(3, "Ken"),
-    Person(4, "Barbie"))
-  )
-
-  def createActions(spark: SparkSession) = spark.createDataFrame(List(
-    Action(1, "log in"),
-    Action(1, "log out"),
-    Action(2, "log in"),
-    Action(2, "browse"),
-    Action(2, "log out"))
-  )
-  case class Action(pid: Int, description: String)
-
 
   /**
     * Read a serialised object from a file
@@ -106,6 +88,25 @@ package object catalyst {
       }
 //      SerializationUtils.serialize(obj, new FileOutputStream(file))
     }
+
+
+
+  /**
+    * Write an string lines to a file
+    *
+    * @param file
+    * @return
+    */
+  def writeLines(lines: Seq[String], file: String): Try[Unit] =
+    Try {
+      // Create a writer
+      val writer = new PrintWriter(new BufferedOutputStream(new FileOutputStream(file)), true)
+      //write each line
+      lines.foreach(line => Try(writer.println(line)))
+      // Close the streams
+      Try(writer.close())
+    }
+
 
   /**
     * Write an object to a file

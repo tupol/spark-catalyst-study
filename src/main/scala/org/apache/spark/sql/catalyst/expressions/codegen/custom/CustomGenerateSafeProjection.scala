@@ -3,6 +3,7 @@ package org.apache.spark.sql.catalyst.expressions.codegen.custom
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.catalyst.expressions.aggregate.NoOp
 import org.apache.spark.sql.catalyst.expressions.codegen._
+import org.apache.spark.sql.catalyst.plans.QueryPlan
 import org.apache.spark.sql.catalyst.plans.logical.LogicalPlan
 import org.apache.spark.sql.catalyst.util.{ArrayBasedMapData, GenericArrayData}
 import org.apache.spark.sql.types._
@@ -18,8 +19,11 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
   protected def canonicalize(in: Seq[Expression]): Seq[Expression] =
     in.map(ExpressionCanonicalizer.execute)
 
-  protected def bind(in: Seq[Expression], inputSchema: Seq[Attribute]): Seq[Expression] =
+  protected def bind(in: Seq[Expression], inputSchema: Seq[Attribute]): Seq[Expression] = {
+    println("Binding references")
+    inputSchema.foreach(println)
     in.map(BindReferences.bindReference(_, inputSchema))
+  }
 
   private def createCodeForStruct( ctx: CodegenContext,
                                    input: String,
@@ -132,10 +136,20 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
     generatedClass.generate(references).asInstanceOf[Projection]
   }
 
-
   def generateCodeAndRef(logicalPlan: LogicalPlan,
                          ctx: CodegenContext = newCodeGenContext()): (CodeAndComment, Array[Any]) = {
-    generateCodeAndRef(bind(logicalPlan.expressions, logicalPlan.inputSet.toSeq), ctx)
+    // This addresses a problem of ordering the input attributes.
+    // Currently the logicalPlan.inputSet returns the inputs in a different order (probably inorder)
+    // Proper ordering is required for binding the input attributes.
+    // TODO See how are normally these attributes bound.
+    def inputs[QP <: QueryPlan[QP]](plan: QP) = {
+      def inputs(plans: Seq[QP]): Seq[Attribute] = plans match {
+        case Nil => Seq[Attribute]()
+        case x +: xs => x.output ++ inputs(xs)
+      }
+      inputs(plan.children)
+    }
+    generateCodeAndRef(bind(logicalPlan.expressions, inputs(logicalPlan)), ctx)
   }
 
   def generateCodeAndRef(expressions: Seq[Expression], inputSchema: Seq[Attribute],
@@ -152,7 +166,7 @@ object CustomGenerateSafeProjection extends CodeGenerator[Seq[Expression], Proje
     (code, references)
   }
 
-  private def generateCode(expressions: Seq[Expression], ctx: CodegenContext = newCodeGenContext()): CodeAndComment = {
+  private def generateCode(expressions: Seq[Expression], ctx: CodegenContext): CodeAndComment = {
 
     val expressionCodes = expressions.zipWithIndex.map {
       case (NoOp, _) => ""

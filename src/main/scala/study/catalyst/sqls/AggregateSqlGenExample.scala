@@ -40,6 +40,8 @@ object AggregateSqlGenExample {
     println("----------------------------------------------")
 
     // Generate the building blocks of our custom projection
+    // !!!!!!!!
+    // UnsupportedOperationException: Cannot evaluate expression: count(input[0, string, true])
     val (code, references) = CustomGenerateSafeProjection.generateCodeAndRef(workPlan)
 
     // Set some metadata, very useful to figure out the inputs and outputs
